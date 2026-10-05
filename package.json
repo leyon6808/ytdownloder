@@ -1,0 +1,12 @@
+{
+  "name": "personal-video-downloader",
+  "version": "1.0.0",
+  "description": "Local learning project: backend wrapper around yt-dlp with progress streaming UI.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

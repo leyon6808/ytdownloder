@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Personal Video Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14171b;
+    --line: #2a2e33;
+    --text: #ecedee;
+    --muted: #888e94;
+    --accent: #e4a63a;
+    --accent-dim: #6b5326;
+    --ok: #4cae6d;
+    --err: #d9634f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+  }
+
+  .reel {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .frame {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 28px 28px 24px;
+  }
+
+  /* sprocket holes — the one distinctive visual device, tied to film reel subject */
+  .frame::before,
+  .frame::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--bg) 0, var(--bg) 6px,
+      transparent 6px, transparent 16px
+    );
+  }
+  .frame::before { left: -14px; }
+  .frame::after { right: -14px; }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .status.running .dot { background: var(--accent); }
+  .status.running { color: var(--accent); }
+  .status.done .dot { background: var(--ok); }
+  .status.done { color: var(--ok); }
+  .status.error .dot { background: var(--err); }
+  .status.error { color: var(--err); }
+
+  .notice {
+    margin: 16px 0 22px;
+    padding: 10px 12px;
+    border-left: 2px solid var(--accent);
+    background: rgba(228, 166, 58, 0.06);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin: 18px 0 6px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    padding: 11px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: #4a4f55; }
+
+  .quality-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .quality-row button {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    padding: 9px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .quality-row button.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(228, 166, 58, 0.08);
+  }
+  .quality-row button:hover:not(.active) { border-color: #444; color: var(--text); }
+
+  .go {
+    width: 100%;
+    margin-top: 22px;
+    padding: 13px;
+    background: var(--accent);
+    border: none;
+    color: #1a1300;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+  }
+  .go:hover { background: #f0b64f; }
+  .go:active { transform: scale(0.997); }
+  .go:disabled { background: var(--accent-dim); color: #7a6a45; cursor: not-allowed; }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .btn-row .go { margin-top: 0; flex: 1; }
+  .cancel {
+    padding: 13px 18px;
+    background: transparent;
+    border: 1px solid var(--err);
+    color: var(--err);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .cancel:hover { background: rgba(217, 99, 79, 0.1); }
+
+  /* film-strip progress: segmented frames filling in, not a plain gradient bar */
+  .progress-shell {
+    display: none;
+    margin-top: 18px;
+  }
+  .progress-track {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    height: 20px;
+  }
+  .progress-track span {
+    background: var(--line);
+    transition: background 0.2s;
+  }
+  .progress-track span.filled { background: var(--accent); }
+  .progress-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .log {
+    display: none;
+    margin-top: 12px;
+    max-height: 100px;
+    overflow-y: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    line-height: 1.6;
+    color: #5c6167;
+    white-space: pre-wrap;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+
+  .result {
+    display: none;
+    margin-top: 16px;
+    border: 1px solid var(--ok);
+    background: rgba(76, 174, 109, 0.07);
+    padding: 12px 14px;
+  }
+  .result a {
+    color: var(--ok);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .result a:hover { text-decoration: underline; }
+
+  .error-box {
+    display: none;
+    margin-top: 16px;
+    border: 1px solid var(--err);
+    background: rgba(217, 99, 79, 0.07);
+    padding: 12px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--err);
+  }
+</style>
+</head>
+<body>
+  <div class="reel">
+    <div class="frame">
+      <header>
+        <h1>Personal Video Downloader</h1>
+        <div class="status" id="status"><span class="dot"></span><span id="statusText">idle</span></div>
+      </header>
+
+      <div class="notice">
+        শুধু নিজের ব্যক্তিগত ব্যবহারের জন্য (local learning project) — নিজের কন্টেন্ট, Creative Commons বা public domain ভিডিওর জন্য ব্যবহার করুন।
+      </div>
+
+      <label for="url">video url</label>
+      <input type="text" id="url" placeholder="https://..." autocomplete="off" />
+
+      <label>quality</label>
+      <div class="quality-row" id="qualityRow">
+        <button data-value="best" class="active">best</button>
+        <button data-value="bv*[height<=1080]+ba/best[height<=1080]">1080p</button>
+        <button data-value="bv*[height<=720]+ba/best[height<=720]">720p</button>
+        <button data-value="bv*[height<=480]+ba/best[height<=480]">480p</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="go" id="goBtn" onclick="startDownload()">Download</button>
+        <button class="cancel" id="cancelBtn" onclick="cancelDownload()" style="display:none;">Cancel</button>
+      </div>
+
+      <div class="progress-shell" id="progressShell">
+        <div class="progress-track" id="progressTrack"></div>
+        <div class="progress-label">
+          <span id="progressPct">0%</span>
+          <span id="progressStage"></span>
+        </div>
+      </div>
+
+      <div class="log" id="log"></div>
+      <div class="result" id="result"></div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+  </div>
+
+<script>
+  const track = document.getElementById('progressTrack');
+  for (let i = 0; i < 24; i++) {
+    const s = document.createElement('span');
+    track.appendChild(s);
+  }
+  const segments = track.querySelectorAll('span');
+
+  let selectedQuality = 'best';
+  let currentEventSource = null;
+  let currentDownloadId = null;
+  document.querySelectorAll('#qualityRow button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#qualityRow button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedQuality = btn.dataset.value;
+    });
+  });
+
+  function setStatus(state, text) {
+    const el = document.getElementById('status');
+    el.className = 'status' + (state ? ' ' + state : '');
+    document.getElementById('statusText').textContent = text;
+  }
+
+  function setProgress(pct) {
+    const filled = Math.round((pct / 100) * segments.length);
+    segments.forEach((s, i) => s.classList.toggle('filled', i < filled));
+    document.getElementById('progressPct').textContent = pct + '%';
+  }
+
+  function resetButtons(running) {
+    document.getElementById('goBtn').disabled = running;
+    document.getElementById('cancelBtn').style.display = running ? 'inline-block' : 'none';
+  }
+
+  function startDownload() {
+    const url = document.getElementById('url').value.trim();
+    if (!url) return;
+
+    const progressShell = document.getElementById('progressShell');
+    const log = document.getElementById('log');
+    const result = document.getElementById('result');
+    const errorBox = document.getElementById('errorBox');
+    const stageEl = document.getElementById('progressStage');
+
+    resetButtons(true);
+    progressShell.style.display = 'block';
+    log.style.display = 'block';
+    log.textContent = '';
+    result.style.display = 'none';
+    errorBox.style.display = 'none';
+    stageEl.textContent = '';
+    setProgress(0);
+    setStatus('running', 'downloading');
+
+    currentDownloadId = crypto.randomUUID();
+    const params = new URLSearchParams({ url, quality: selectedQuality, id: currentDownloadId });
+    const source = new EventSource('/api/download?' + params.toString());
+    currentEventSource = source;
+
+    source.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data.progress) {
+        setProgress(Math.round(parseFloat(data.progress)));
+        stageEl.textContent = '';
+      }
+      if (data.stage === 'merging') {
+        setStatus('running', 'merging');
+        stageEl.textContent = 'merging audio + video…';
+      }
+      if (data.log) {
+        log.textContent += data.log;
+        log.scrollTop = log.scrollHeight;
+      }
+      if (data.done) {
+        setProgress(100);
+        stageEl.textContent = '';
+        setStatus('done', 'done');
+        source.close();
+        resetButtons(false);
+        if (data.file) {
+          result.style.display = 'block';
+          result.innerHTML = `<a href="/api/file/${encodeURIComponent(data.file)}" download>↓ ${data.file}</a>`;
+        }
+      }
+      if (data.cancelled) {
+        setStatus(null, 'cancelled');
+        stageEl.textContent = '';
+        source.close();
+        resetButtons(false);
+      }
+      if (data.error) {
+        setStatus('error', 'failed');
+        errorBox.style.display = 'block';
+        errorBox.textContent = data.error;
+        source.close();
+        resetButtons(false);
+      }
+    };
+
+    source.onerror = () => {
+      if (!document.getElementById('goBtn').disabled) return;
+      setStatus('error', 'connection lost');
+      source.close();
+      resetButtons(false);
+    };
+  }
+
+  function cancelDownload() {
+    if (!currentDownloadId) return;
+    fetch('/api/cancel/' + currentDownloadId, { method: 'POST' }).catch(() => {});
+    if (currentEventSource) currentEventSource.close();
+    setStatus(null, 'cancelled');
+    document.getElementById('progressStage').textContent = '';
+    resetButtons(false);
+  }
+</script>
+</body>
+</html>
